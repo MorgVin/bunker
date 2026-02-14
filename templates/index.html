@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Бункер — Общий экран</title>
+    <style>
+        body { 
+            background: #0a0a0a url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #eee;
+            font-family: Arial;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { text-align: center; color: #0f0; text-shadow: 0 0 15px #0f0; margin-bottom: 10px; }
+
+        .catastrophe {
+            text-align: center;
+            margin: 20px 0 40px;
+        }
+        .catastrophe img {
+            max-width: 700px;
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0,255,0,0.3);
+            border: 2px solid #333;
+        }
+
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+        }
+        .card {
+            width: 320px;
+            background: rgba(20,20,20,0.92);
+            border: 1px solid #333;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.2s, opacity 0.5s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .card:hover {
+            transform: scale(1.03);
+        }
+        .avatar {
+            width: 100%;
+            height: 200px;
+            object-fit: contain; /* теперь полностью видно */
+            background: #111;
+        }
+        .username {
+            text-align: center;
+            padding: 10px 0;
+            font-size: 1.2em;
+            color: #0f0;
+            background: rgba(0,0,0,0.5);
+            margin: 0;
+        }
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.88);
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            text-align: center;
+            padding: 20px 10px;
+            color: white;
+        }
+        .card:hover .overlay {
+            display: flex;
+        }
+        .overlay h3 {
+            margin: 10px 0 15px;
+            color: #0f0;
+            font-size: 1.4em;
+        }
+        .category {
+            margin: 6px 0;
+            font-size: 0.95em;
+            width: 100%;
+            text-align: left;
+            padding-left: 10px;
+        }
+        .label {
+            color: #0f0;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Socket.IO подключён к серверу');
+        });
+
+        socket.on('create_card', (data) => {
+            console.log('Получено событие create_card:', data);
+
+            const playerId = data.player_id;
+            if (!playerId) {
+                console.error('Ошибка: в данных нет player_id!');
+                return;
+            }
+
+            let card = document.getElementById(`card-${playerId}`);
+            if (card) {
+                console.log(`Карточка ${playerId} уже существует`);
+                return;
+            }
+
+            card = document.createElement('div');
+            card.id = `card-${playerId}`;
+            card.className = 'card';
+
+            let html = `
+                <div class="username">${data.username}</div>
+                <img src="${data.avatar || '/static/avatars/default.jpg'}" class="avatar" alt="${data.username}">
+                <div class="overlay">
+                    <h3>${data.username}</h3>
+            `;
+
+            Object.entries(data.categories || {}).forEach(([key, cat]) => {
+                html += `<div class="category"><span class="label">${cat.label}:</span> ${cat.value}</div>`;
+            });
+
+            html += `</div>`;
+            card.innerHTML = html;
+
+            document.getElementById('card-grid').appendChild(card);
+            setTimeout(() => card.classList.add('visible'), 100);
+
+            console.log(`Карточка добавлена: card-${playerId}`);
+
+            if (data.catastrophe_image) {
+                document.getElementById('catastrophe-container').innerHTML = `<img src="${data.catastrophe_image}" alt="Катастрофа">`;
+                console.log('Обновлено изображение катастрофы');
+            }
+        });
+
+        socket.on('update_category', (data) => {
+            console.log('Получено событие update_category:', data);
+
+            const playerId = data.player_id;
+            if (!playerId) {
+                console.error('Нет player_id в update_category');
+                return;
+            }
+
+            const card = document.getElementById(`card-${playerId}`);
+            if (!card) {
+                console.log(`Карточка ${playerId} не найдена`);
+                return;
+            }
+
+            const categories = card.querySelectorAll('.category');
+            const index = ['gender_age', 'profession', 'health', 'baggage', 'hobby', 'secret', 'chance'].indexOf(data.category);
+            if (index !== -1 && categories[index]) {
+                categories[index].innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
+                console.log(`Обновлено поле ${data.category} → ${data.value}`);
+            } else {
+                console.log(`Категория ${data.category} не найдена`);
+            }
+        });
+
+        socket.on('error', (err) => {
+            console.log('Ошибка Socket.IO:', err);
+        });
+    </script>
+</head>
+<body>
+    <h1>Бункер — Общий экран</h1>
+
+    <div class="catastrophe" id="catastrophe-container"></div>
+
+    <div id="card-grid" class="card-grid"></div>
+</body>
+</html>
