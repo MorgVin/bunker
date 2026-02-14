@@ -8,107 +8,224 @@
             background: #0a0a0a url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
             background-size: cover;
             color: #eee;
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
         }
-        h1 { text-align: center; color: #0f0; text-shadow: 0 0 15px #0f0; margin-bottom: 10px; }
+        h1 { 
+            text-align: center; 
+            color: #0f0; 
+            text-shadow: 0 0 15px #0f0; 
+            margin-bottom: 20px; 
+            font-size: 2.5em;
+        }
 
-        .catastrophe { text-align: center; margin: 20px 0 40px; }
-        .catastrophe img { max-width: 700px; border-radius: 12px; box-shadow: 0 0 30px rgba(0,255,0,0.3); }
+        .catastrophe { 
+            text-align: center; 
+            margin: 20px 0 40px; 
+        }
+        .catastrophe img { 
+            max-width: 700px; 
+            border-radius: 12px; 
+            box-shadow: 0 0 30px rgba(0,255,0,0.3); 
+            border: 2px solid #333;
+        }
 
-        .card-grid { display: flex; flex-wrap: wrap; gap: 25px; justify-content: center; }
+        .card-grid { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 30px; 
+            justify-content: center; 
+        }
         .card {
-            width: 320px;
+            width: 340px;
             background: rgba(20,20,20,0.92);
-            border: 1px solid #333;
-            border-radius: 12px;
+            border: 1px solid #444;
+            border-radius: 14px;
             overflow: hidden;
             position: relative;
-            transition: transform 0.2s, opacity 0.5s;
+            transition: transform 0.3s ease, opacity 0.6s ease, box-shadow 0.3s;
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px);
+            box-shadow: 0 6px 20px rgba(0,255,0,0.15);
         }
-        .card.visible { opacity: 1; transform: translateY(0); }
-        .card:hover { transform: scale(1.03); }
+        .card.visible { 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
+        .card:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 12px 40px rgba(0,255,0,0.35);
+        }
 
-        .avatar { width: 100%; height: 200px; object-fit: cover; }
-        .username { text-align: center; padding: 10px; font-size: 1.2em; color: #0f0; background: rgba(0,0,0,0.5); margin: 0; }
+        /* Никнейм сверху — всегда виден полностью */
+        .username {
+            text-align: center;
+            padding: 12px 10px;
+            font-size: 1.35em;
+            color: #0f0;
+            background: rgba(0,0,0,0.6);
+            margin: 0;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
+        /* Аватар полностью виден */
+        .avatar-container {
+            width: 100%;
+            height: 220px; /* чуть выше, чтобы текст влезал лучше */
+            overflow: hidden;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .avatar {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* главное: не обрезает */
+            object-position: center;
+            transition: transform 0.4s ease;
+        }
+        .card:hover .avatar {
+            transform: scale(1.08);
+        }
+
+        /* Overlay при наведении */
         .overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.88);
             display: none;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             text-align: center;
-            padding: 20px;
+            padding: 15px 12px;
+            overflow-y: auto; /* прокрутка при длинном тексте */
+            scrollbar-width: thin;
+        }
+        .overlay::-webkit-scrollbar {
+            width: 6px;
+        }
+        .overlay::-webkit-scrollbar-thumb {
+            background: #0f0;
+            border-radius: 3px;
         }
         .card:hover .overlay { display: flex; }
-        .overlay h3 { margin: 10px 0 15px; color: #0f0; }
-        .category { margin: 6px 0; font-size: 0.95em; }
-        .label { color: #0f0; font-weight: bold; }
+        .overlay h3 { 
+            margin: 12px 0 18px; 
+            color: #0f0; 
+            font-size: 1.5em; 
+            text-shadow: 0 0 10px #0f0;
+        }
+        .category {
+            margin: 8px 0;
+            font-size: 1em;
+            width: 100%;
+            text-align: left;
+            padding-left: 10px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        .label {
+            color: #0f0;
+            font-weight: bold;
+            margin-right: 6px;
+        }
     </style>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         const socket = io();
 
-        socket.on('connect', () => console.log('Socket.IO подключён'));
+        socket.on('connect', () => {
+            console.log('Socket.IO подключён к серверу');
+        });
 
         socket.on('create_card', (data) => {
-            console.log('create_card →', data);
+            console.log('Получено событие create_card:', data);
 
-            const pid = data.player_id;
-            if (!pid) {
-                console.error('Нет player_id!');
+            const playerId = data.player_id;
+            if (!playerId) {
+                console.error('Ошибка: нет player_id в данных!');
                 return;
             }
 
-            if (document.getElementById(`card-${pid}`)) {
-                console.log(`Карточка ${pid} уже есть`);
+            let card = document.getElementById(`card-${playerId}`);
+            if (card) {
+                console.log(`Карточка ${playerId} уже существует`);
                 return;
             }
 
-            const card = document.createElement('div');
-            card.id = `card-${pid}`;
+            card = document.createElement('div');
+            card.id = `card-${playerId}`;
             card.className = 'card';
-            card.innerHTML = `
+
+            let html = `
                 <div class="username">${data.username}</div>
-                <img src="${data.avatar}" class="avatar" alt="${data.username}">
+                <div class="avatar-container">
+                    <img src="${data.avatar || '/static/avatars/default.jpg'}" class="avatar" alt="${data.username}">
+                </div>
                 <div class="overlay">
                     <h3>${data.username}</h3>
-                    ${Object.entries(data.categories).map(([k, v]) => 
-                        `<div class="category"><span class="label">${v.label}:</span> ${v.value}</div>`
-                    ).join('')}
-                </div>
             `;
 
+            Object.entries(data.categories || {}).forEach(([key, cat]) => {
+                html += `<div class="category"><span class="label">${cat.label}:</span> ${cat.value}</div>`;
+            });
+
+            html += `</div>`;
+            card.innerHTML = html;
+
             document.getElementById('card-grid').appendChild(card);
-            setTimeout(() => card.classList.add('visible'), 50);
+            setTimeout(() => card.classList.add('visible'), 100);
+
+            console.log(`Карточка добавлена: card-${playerId}`);
 
             if (data.catastrophe_image) {
-                document.getElementById('catastrophe-container').innerHTML = 
-                    `<img src="${data.catastrophe_image}" alt="Катастрофа">`;
+                let catContainer = document.getElementById('catastrophe-container');
+                catContainer.innerHTML = `<img src="${data.catastrophe_image}" alt="Катастрофа">`;
+                console.log('Обновлено изображение катастрофы');
             }
         });
 
         socket.on('update_category', (data) => {
-            console.log('update_category →', data);
-            const card = document.getElementById(`card-${data.player_id}`);
-            if (!card) return;
+            console.log('Получено событие update_category:', data);
 
-            const cats = card.querySelectorAll('.category');
-            const idx = ['gender_age','profession','health','baggage','hobby','secret','chance'].indexOf(data.category);
-            if (idx !== -1) {
-                cats[idx].innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
+            const playerId = data.player_id;
+            if (!playerId) {
+                console.error('Нет player_id в update_category');
+                return;
             }
+
+            const card = document.getElementById(`card-${playerId}`);
+            if (!card) {
+                console.log(`Карточка ${playerId} не найдена`);
+                return;
+            }
+
+            const categories = card.querySelectorAll('.category');
+            const index = ['gender_age', 'profession', 'health', 'baggage', 'hobby', 'secret', 'chance'].indexOf(data.category);
+            if (index !== -1 && categories[index]) {
+                categories[index].innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
+                console.log(`Обновлено поле ${data.category} → ${data.value}`);
+            } else {
+                console.log(`Категория ${data.category} не найдена в карточке ${playerId}`);
+            }
+        });
+
+        socket.on('error', (err) => {
+            console.log('Ошибка Socket.IO:', err);
         });
     </script>
 </head>
 <body>
     <h1>Бункер — Общий экран</h1>
+
     <div class="catastrophe" id="catastrophe-container"></div>
+
     <div id="card-grid" class="card-grid"></div>
 </body>
 </html>
