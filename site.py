@@ -55,31 +55,29 @@ def open_card():
     if not player_id:
         return jsonify({"status": "error", "message": "Нет player_id"}), 400
 
-    # Инициализация карточки (от каждого игрока при /deal)
+    # Инициализация карточки
     if action == "init":
-        if player_id in cards_state:
-            print(f"Карточка {player_id} уже существует, пропускаем")
-        else:
-            avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
-            avatar_url = AVATARS[avatar_index]
+        avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
+        avatar_url = AVATARS[avatar_index]
 
-            cards_state[player_id] = {
-                "player_id": player_id,
-                "username": username,
-                "avatar": avatar_url,
-                "catastrophe_image": CATASTROPHE_IMAGES.get(current_catastrophe, '/static/catastrophes/default.jpg'),
-                "categories": {
-                    "gender_age": {"label": "Пол / Возраст", "value": "????"},
-                    "profession": {"label": "Профессия", "value": "????"},
-                    "health": {"label": "Здоровье", "value": "????"},
-                    "baggage": {"label": "Багаж", "value": "????"},
-                    "hobby": {"label": "Хобби / Навык", "value": "????"},
-                    "secret": {"label": "Секрет", "value": "????"},
-                    "chance": {"label": "Шанс выживания", "value": "????"}
-                }
-            }
+        # Создаём или обновляем карточку
+        cards_state[player_id] = {
+            "player_id": player_id,  # ← обязательно!
+            "username": username,
+            "avatar": avatar_url,
+            "catastrophe_image": CATASTROPHE_IMAGES.get(current_catastrophe, '/static/catastrophes/default.jpg'),
+            "categories": cards_state.get(player_id, {}).get("categories", {
+                "gender_age": {"label": "Пол / Возраст", "value": "????"},
+                "profession": {"label": "Профессия", "value": "????"},
+                "health": {"label": "Здоровье", "value": "????"},
+                "baggage": {"label": "Багаж", "value": "????"},
+                "hobby": {"label": "Хобби / Навык", "value": "????"},
+                "secret": {"label": "Секрет", "value": "????"},
+                "chance": {"label": "Шанс выживания", "value": "????"}
+            })
+        }
 
-        # Всегда отправляем полную карточку при init
+        # Отправляем полную карточку клиенту
         socketio.emit('create_card', cards_state[player_id])
         print(f"Отправлено create_card для {username} ({player_id})")
 
@@ -92,8 +90,7 @@ def open_card():
 
     if category and value is not None:
         if player_id not in cards_state:
-            print(f"Ошибка: карточка {player_id} не найдена")
-            return jsonify({"status": "error", "message": "Карточка не инициализирована"}), 400
+            return jsonify({"status": "error", "message": "Карточка не найдена"}), 400
 
         if category in cards_state[player_id]["categories"]:
             cards_state[player_id]["categories"][category]["value"] = value
@@ -108,6 +105,6 @@ def open_card():
 
     return jsonify({"status": "success"}), 200
 
-
 if __name__ == '__main__':
+
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
