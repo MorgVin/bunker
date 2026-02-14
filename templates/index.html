@@ -95,87 +95,81 @@
             font-weight: bold;
         }
     </style>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script>
-        const socket = io();
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    const socket = io();
 
-        socket.on('connect', () => {
-            console.log('Socket.IO подключён к серверу');
+    socket.on('connect', () => {
+        console.log('Socket.IO подключён');
+    });
+
+    socket.on('create_card', (data) => {
+        console.log('Получено create_card:', data);
+
+        const playerId = data.player_id;
+        if (!playerId) {
+            console.error('Нет player_id в create_card!');
+            return;
+        }
+
+        let card = document.getElementById(`card-${playerId}`);
+        if (card) {
+            console.log(`Карточка ${playerId} уже существует`);
+            return;
+        }
+
+        card = document.createElement('div');
+        card.id = `card-${playerId}`;
+        card.className = 'card';
+
+        let html = `
+            <div class="username">${data.username}</div>
+            <img src="${data.avatar || '/static/avatars/default.jpg'}" class="avatar" alt="${data.username}">
+            <div class="overlay">
+                <h3>${data.username}</h3>
+        `;
+
+        Object.entries(data.categories || {}).forEach(([key, cat]) => {
+            html += `<div class="category"><span class="label">${cat.label}:</span> ${cat.value}</div>`;
         });
 
-        socket.on('create_card', (data) => {
-            console.log('Получено событие create_card:', data);
+        html += `</div>`;
+        card.innerHTML = html;
 
-            const playerId = data.player_id;
-            if (!playerId) {
-                console.error('Ошибка: в данных нет player_id!');
-                return;
-            }
+        document.getElementById('card-grid').appendChild(card);
+        setTimeout(() => card.classList.add('visible'), 100);
 
-            let card = document.getElementById(`card-${playerId}`);
-            if (card) {
-                console.log(`Карточка ${playerId} уже существует`);
-                return;
-            }
+        console.log(`Карточка добавлена: card-${playerId}`);
 
-            card = document.createElement('div');
-            card.id = `card-${playerId}`;
-            card.className = 'card';
+        if (data.catastrophe_image) {
+            document.getElementById('catastrophe-container').innerHTML = `<img src="${data.catastrophe_image}" alt="Катастрофа">`;
+            console.log('Катастрофа обновлена');
+        }
+    });
 
-            let html = `
-                <div class="username">${data.username}</div>
-                <img src="${data.avatar || '/static/avatars/default.jpg'}" class="avatar" alt="${data.username}">
-                <div class="overlay">
-                    <h3>${data.username}</h3>
-            `;
+    socket.on('update_category', (data) => {
+        console.log('Получено update_category:', data);
 
-            Object.entries(data.categories || {}).forEach(([key, cat]) => {
-                html += `<div class="category"><span class="label">${cat.label}:</span> ${cat.value}</div>`;
-            });
+        const playerId = data.player_id;
+        if (!playerId) {
+            console.error('Нет player_id в update');
+            return;
+        }
 
-            html += `</div>`;
-            card.innerHTML = html;
+        const card = document.getElementById(`card-${playerId}`);
+        if (!card) {
+            console.log(`Карточка ${playerId} не найдена`);
+            return;
+        }
 
-            document.getElementById('card-grid').appendChild(card);
-            setTimeout(() => card.classList.add('visible'), 100);
-
-            console.log(`Карточка добавлена: card-${playerId}`);
-
-            if (data.catastrophe_image) {
-                document.getElementById('catastrophe-container').innerHTML = `<img src="${data.catastrophe_image}" alt="Катастрофа">`;
-                console.log('Обновлено изображение катастрофы');
-            }
-        });
-
-        socket.on('update_category', (data) => {
-            console.log('Получено событие update_category:', data);
-
-            const playerId = data.player_id;
-            if (!playerId) {
-                console.error('Нет player_id в update_category');
-                return;
-            }
-
-            const card = document.getElementById(`card-${playerId}`);
-            if (!card) {
-                console.log(`Карточка ${playerId} не найдена`);
-                return;
-            }
-
-            const categories = card.querySelectorAll('.category');
-            const index = ['gender_age', 'profession', 'health', 'baggage', 'hobby', 'secret', 'chance'].indexOf(data.category);
-            if (index !== -1 && categories[index]) {
-                categories[index].innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
-                console.log(`Обновлено поле ${data.category} → ${data.value}`);
-            } else {
-                console.log(`Категория ${data.category} не найдена`);
-            }
-        });
-
-        socket.on('error', (err) => {
-            console.log('Ошибка Socket.IO:', err);
-        });
-    </script>
+        const categories = card.querySelectorAll('.category');
+        const index = ['gender_age', 'profession', 'health', 'baggage', 'hobby', 'secret', 'chance'].indexOf(data.category);
+        if (index !== -1 && categories[index]) {
+            categories[index].innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
+            console.log(`Обновлено поле ${data.category}`);
+        }
+    });
+</script>
 </head>
 <body>
     <h1>Бункер — Общий экран</h1>
@@ -184,4 +178,5 @@
 
     <div id="card-grid" class="card-grid"></div>
 </body>
+
 </html>
