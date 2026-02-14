@@ -6,7 +6,7 @@ app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-# 9 аватаров — положи файлы в static/avatars/
+# 9 аватаров
 AVATARS = [
     '/static/avatars/avatar1.jpg',
     '/static/avatars/avatar2.jpg',
@@ -19,7 +19,7 @@ AVATARS = [
     '/static/avatars/avatar9.jpg'
 ]
 
-# Изображения катастроф — положи в static/catastrophes/
+# Катастрофы (обнови пути под свои файлы)
 CATASTROPHE_IMAGES = {
     'Ядерная война: высокий уровень радиации, разрушенная инфраструктура, дефицит пищи и воды.': '/static/catastrophes/nuclear.jpg',
     'Пандемия смертельного вируса: высокая заразность, нужны медики и антибиотики, иммунитет критичен.': '/static/catastrophes/pandemic.jpg',
@@ -36,7 +36,6 @@ CATASTROPHE_IMAGES = {
 }
 
 cards_state = {}
-current_catastrophe = None
 
 @app.route('/')
 def index():
@@ -44,7 +43,6 @@ def index():
 
 @app.route('/api/open_card', methods=['POST'])
 def open_card():
-    global current_catastrophe
     data = request.json
     print("Получены данные от бота:", data)
 
@@ -53,34 +51,31 @@ def open_card():
     action = data.get('action')
 
     if not player_id:
-        return jsonify({"status": "error", "message": "Нет player_id"}), 400
+        return jsonify({"status": "error"}), 400
 
-    # Инициализация карточки
     if action == "init":
-        avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
-        avatar_url = AVATARS[avatar_index]
+        if player_id not in cards_state:
+            avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
+            avatar_url = AVATARS[avatar_index]
 
-        # Создаём или обновляем карточку
-        cards_state[player_id] = {
-            "player_id": player_id,  # ← обязательно!
-            "username": username,
-            "avatar": avatar_url,
-            "catastrophe_image": CATASTROPHE_IMAGES.get(current_catastrophe, '/static/catastrophes/default.jpg'),
-            "categories": cards_state.get(player_id, {}).get("categories", {
-                "gender_age": {"label": "Пол / Возраст", "value": "????"},
-                "profession": {"label": "Профессия", "value": "????"},
-                "health": {"label": "Здоровье", "value": "????"},
-                "baggage": {"label": "Багаж", "value": "????"},
-                "hobby": {"label": "Хобби / Навык", "value": "????"},
-                "secret": {"label": "Секрет", "value": "????"},
-                "chance": {"label": "Шанс выживания", "value": "????"}
-            })
-        }
+            cards_state[player_id] = {
+                "player_id": player_id,           # ← важно!
+                "username": username,
+                "avatar": avatar_url,
+                "catastrophe_image": '/static/catastrophes/default.jpg',   # пока заглушка
+                "categories": {
+                    "gender_age": {"label": "Пол / Возраст", "value": "????"},
+                    "profession": {"label": "Профессия", "value": "????"},
+                    "health": {"label": "Здоровье", "value": "????"},
+                    "baggage": {"label": "Багаж", "value": "????"},
+                    "hobby": {"label": "Хобби / Навык", "value": "????"},
+                    "secret": {"label": "Секрет", "value": "????"},
+                    "chance": {"label": "Шанс выживания", "value": "????"}
+                }
+            }
 
-        # Отправляем полную карточку клиенту
         socketio.emit('create_card', cards_state[player_id])
         print(f"Отправлено create_card для {username} ({player_id})")
-
         return jsonify({"status": "success"}), 200
 
     # Обновление категории
@@ -89,10 +84,7 @@ def open_card():
     value = data.get('value')
 
     if category and value is not None:
-        if player_id not in cards_state:
-            return jsonify({"status": "error", "message": "Карточка не найдена"}), 400
-
-        if category in cards_state[player_id]["categories"]:
+        if player_id in cards_state and category in cards_state[player_id]["categories"]:
             cards_state[player_id]["categories"][category]["value"] = value
 
         socketio.emit('update_category', {
@@ -101,10 +93,10 @@ def open_card():
             "label": label,
             "value": value
         })
-        print(f"Обновлена категория {category} для {player_id}: {value}")
+        print(f"Обновлена категория {category} для {player_id}")
 
     return jsonify({"status": "success"}), 200
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
