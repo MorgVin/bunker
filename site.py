@@ -6,7 +6,7 @@ app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-# 9 аватаров
+# Твои 9 аватаров — положи в static/avatars/
 AVATARS = [
     '/static/avatars/avatar1.jpg',
     '/static/avatars/avatar2.jpg',
@@ -19,7 +19,7 @@ AVATARS = [
     '/static/avatars/avatar9.jpg'
 ]
 
-# Катастрофы (обнови пути под свои файлы)
+# Изображения катастроф — положи в static/catastrophes/
 CATASTROPHE_IMAGES = {
     'Ядерная война: высокий уровень радиации, разрушенная инфраструктура, дефицит пищи и воды.': '/static/catastrophes/nuclear.jpg',
     'Пандемия смертельного вируса: высокая заразность, нужны медики и антибиотики, иммунитет критичен.': '/static/catastrophes/pandemic.jpg',
@@ -51,7 +51,7 @@ def open_card():
     action = data.get('action')
 
     if not player_id:
-        return jsonify({"status": "error"}), 400
+        return jsonify({"status": "error", "message": "Нет player_id"}), 400
 
     if action == "init":
         if player_id not in cards_state:
@@ -59,10 +59,10 @@ def open_card():
             avatar_url = AVATARS[avatar_index]
 
             cards_state[player_id] = {
-                "player_id": player_id,           # ← важно!
+                "player_id": player_id,
                 "username": username,
                 "avatar": avatar_url,
-                "catastrophe_image": '/static/catastrophes/default.jpg',   # пока заглушка
+                "catastrophe_image": CATASTROPHE_IMAGES.get('default', '/static/catastrophes/default.jpg'),
                 "categories": {
                     "gender_age": {"label": "Пол / Возраст", "value": "????"},
                     "profession": {"label": "Профессия", "value": "????"},
@@ -76,6 +76,7 @@ def open_card():
 
         socketio.emit('create_card', cards_state[player_id])
         print(f"Отправлено create_card для {username} ({player_id})")
+
         return jsonify({"status": "success"}), 200
 
     # Обновление категории
@@ -93,7 +94,7 @@ def open_card():
             "label": label,
             "value": value
         })
-        print(f"Обновлена категория {category} для {player_id}")
+        print(f"Обновлена категория {category} для {player_id}: {value}")
 
     return jsonify({"status": "success"}), 200
 
