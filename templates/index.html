@@ -16,53 +16,53 @@
             text-align: center; 
             color: #0f0; 
             text-shadow: 0 0 15px #0f0; 
-            margin-bottom: 20px; 
-            font-size: 2.8em;
+            margin-bottom: 30px; 
+            font-size: 3em;
         }
 
         .catastrophe { 
             text-align: center; 
-            margin: 20px 0 40px; 
+            margin: 30px 0 50px; 
         }
         .catastrophe img { 
-            max-width: 800px; 
-            border-radius: 12px; 
-            box-shadow: 0 0 30px rgba(0,255,0,0.3); 
+            max-width: 900px; 
+            border-radius: 16px; 
+            box-shadow: 0 0 40px rgba(0,255,0,0.3); 
             border: 2px solid #333;
         }
 
         .card-grid { 
             display: flex; 
             flex-wrap: wrap; 
-            gap: 35px; 
+            gap: 40px; 
             justify-content: center; 
         }
         .card {
-            width: 380px; /* увеличил ширину — теперь текст влезает */
+            width: 420px; /* большая карточка */
             background: linear-gradient(to bottom, rgba(30,30,30,0.95), rgba(10,10,10,0.95));
             border: 1px solid #444;
-            border-radius: 16px;
+            border-radius: 18px;
             overflow: hidden;
             position: relative;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             opacity: 0;
             transform: translateY(30px);
-            box-shadow: 0 8px 25px rgba(0,255,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,255,0,0.2);
         }
         .card.visible { 
             opacity: 1; 
             transform: translateY(0); 
         }
         .card:hover { 
-            transform: scale(1.06); 
-            box-shadow: 0 15px 45px rgba(0,255,0,0.4);
+            transform: scale(1.05); 
+            box-shadow: 0 20px 50px rgba(0,255,0,0.4);
         }
 
         /* Никнейм сверху — полностью виден, с переносом */
         .username {
             text-align: center;
-            padding: 14px 12px;
-            font-size: 1.45em;
+            padding: 16px 12px;
+            font-size: 1.6em;
             color: #0f0;
             background: rgba(0,0,0,0.6);
             margin: 0;
@@ -74,7 +74,7 @@
         /* Аватар полностью виден */
         .avatar-container {
             width: 100%;
-            height: 240px; /* увеличил высоту */
+            height: 280px; /* большая высота аватара */
             overflow: hidden;
             background: #111;
             display: flex;
@@ -92,47 +92,39 @@
             transform: scale(1.08);
         }
 
-        /* Overlay */
+        /* Overlay при наведении */
         .overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.90);
+            background: rgba(0,0,0,0.92);
             display: none;
             flex-direction: column;
             justify-content: flex-start;
             align-items: center;
             text-align: center;
-            padding: 20px 15px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-        }
-        .overlay::-webkit-scrollbar {
-            width: 8px;
-        }
-        .overlay::-webkit-scrollbar-thumb {
-            background: #0f0;
-            border-radius: 4px;
+            padding: 25px 20px;
+            overflow-y: hidden; /* без скролла */
         }
         .card:hover .overlay { display: flex; }
         .overlay h3 { 
-            margin: 15px 0 20px; 
+            margin: 20px 0 25px; 
             color: #0f0; 
-            font-size: 1.6em; 
-            text-shadow: 0 0 10px #0f0;
+            font-size: 1.8em; 
+            text-shadow: 0 0 12px #0f0;
         }
         .category {
-            margin: 10px 0;
-            font-size: 1.05em;
+            margin: 12px 0;
+            font-size: 1.15em;
             width: 100%;
             text-align: left;
-            padding-left: 12px;
+            padding-left: 15px;
             word-wrap: break-word;
-            line-height: 1.45;
+            line-height: 1.5;
         }
         .label {
             color: #0f0;
             font-weight: bold;
-            margin-right: 8px;
+            margin-right: 10px;
         }
     </style>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
