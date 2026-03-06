@@ -35,7 +35,7 @@ CATASTROPHE_IMAGES = {
     'Биологическая война: мутировавшие организмы, нужны биологи и вакцины.': '/static/catastrophes/bio_war.jpg',
 }
 
-cards_state = {}
+cards_state = {}  # глобальное хранилище
 
 @app.route('/')
 def index():
@@ -50,19 +50,34 @@ def open_card():
     username = data.get('username', '???')
     action = data.get('action')
 
+    if action == "set_catastrophe":
+        catastrophe = data.get('catastrophe')
+        image = data.get('catastrophe_image', CATASTROPHE_IMAGES['default'])
+
+        for pid in cards_state:
+            cards_state[pid]["catastrophe"] = catastrophe
+            cards_state[pid]["catastrophe_image"] = image
+
+        socketio.emit('set_catastrophe', {
+            "catastrophe": catastrophe,
+            "catastrophe_image": image
+        })
+        return jsonify({"status": "catastrophe_set"}), 200
+
     if not player_id:
         return jsonify({"status": "error", "message": "Нет player_id"}), 400
+
+    player_id = str(player_id)
 
     if action == "init":
         if player_id not in cards_state:
             avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
-            avatar_url = AVATARS[avatar_index]
-
             cards_state[player_id] = {
                 "player_id": player_id,
                 "username": username,
-                "avatar": avatar_url,
+                "avatar": AVATARS[avatar_index],
                 "catastrophe_image": CATASTROPHE_IMAGES.get('default', '/static/catastrophes/default.jpg'),
+                "catastrophe": "Ожидание катастрофы...",
                 "categories": {
                     "gender_age": {"label": "Пол / Возраст", "value": "????"},
                     "profession": {"label": "Профессия", "value": "????"},
@@ -73,31 +88,41 @@ def open_card():
                     "chance": {"label": "Шанс выживания", "value": "????"}
                 }
             }
+        else:
+            cards_state[player_id]["username"] = username
 
         socketio.emit('create_card', cards_state[player_id])
-        print(f"Отправлено create_card для {username} ({player_id})")
-
         return jsonify({"status": "success"}), 200
 
-    # Обновление категории
-    category = data.get('category')
-    label = data.get('label')
-    value = data.get('value')
+    elif action == "update_nick":
+        if player_id in cards_state:
+            cards_state[player_id]["username"] = username
+            socketio.emit('update_nick', {"player_id": player_id, "username": username})
+            return jsonify({"status": "nick_updated"}), 200
+        return jsonify({"status": "not_found"}), 404
 
-    if category and value is not None:
-        if player_id in cards_state and category in cards_state[player_id]["categories"]:
-            cards_state[player_id]["categories"][category]["value"] = value
+    elif action == "update_category":
+        category = data.get('category')
+        label = data.get('label')
+        value = data.get('value')
 
-        socketio.emit('update_category', {
-            "player_id": player_id,
-            "category": category,
-            "label": label,
-            "value": value
-        })
-        print(f"Обновлена категория {category} для {player_id}: {value}")
+        if player_id in cards_state:
+            cards_state[player_id]["categories"][category] = {"label": label, "value": value}
+            socketio.emit('update_category', {
+                "player_id": player_id,
+                "category": category,
+                "label": label,
+                "value": value
+            })
+            return jsonify({"status": "category_updated"}), 200
+        return jsonify({"status": "not_found"}), 404
 
-    return jsonify({"status": "success"}), 200
+    elif action == "clear_all":
+        cards_state.clear()
+        socketio.emit('clear_all')
+        return jsonify({"status": "cleared"}), 200
 
+    return jsonify({"status": "error", "message": "Неизвестное действие"}), 400
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
