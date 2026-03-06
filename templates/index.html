@@ -237,10 +237,60 @@
     </script>
 </head>
 <body>
-    <h1>Бункер — Общий экран</h1>
-
-    <div class="catastrophe" id="catastrophe-container"></div>
-
+    <div id="catastrophe-container"></div>
     <div id="card-grid" class="card-grid"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('create_card', function(data) {
+            let card = document.getElementById(`card-${data.player_id}`);
+            if (!card) {
+                card = document.createElement('div');
+                card.id = `card-${data.player_id}`;
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="username">${data.username}</div>
+                    <img src="${data.avatar}" class="avatar" alt="avatar">
+                    <div class="catastrophe">
+                        <img src="${data.catastrophe_image || '/static/catastrophes/default.jpg'}" alt="Катастрофа">
+                    </div>
+                    <!-- категории -->
+                `;
+                document.getElementById('card-grid').appendChild(card);
+            } else {
+                card.querySelector('.username').textContent = data.username;
+            }
+        });
+
+        socket.on('update_nick', function(data) {
+            const card = document.getElementById(`card-${data.player_id}`);
+            if (card) {
+                card.querySelector('.username').textContent = data.username;
+            }
+        });
+
+        socket.on('update_category', function(data) {
+            const card = document.getElementById(`card-${data.player_id}`);
+            if (card) {
+                const catDiv = card.querySelector(`[data-category="${data.category}"]`);
+                if (catDiv) {
+                    catDiv.innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
+                }
+            }
+        });
+
+        socket.on('set_catastrophe', function(data) {
+            const container = document.getElementById('catastrophe-container');
+            container.innerHTML = `<img src="${data.catastrophe_image}" alt="${data.catastrophe}" style="max-width:900px;">`;
+        });
+
+        socket.on('clear_all', function() {
+            document.getElementById('card-grid').innerHTML = '';
+            document.getElementById('catastrophe-container').innerHTML = '';
+        });
+    </script>
 </body>
 </html>
+
