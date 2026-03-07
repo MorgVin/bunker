@@ -23,21 +23,24 @@
         }
         .catastrophe-container {
             text-align: center;
-            margin: 30px 0 60px;
+            margin: 30px auto 60px;
             max-width: 1000px;
-            margin-left: auto;
-            margin-right: auto;
+            padding: 20px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 16px;
+            border: 1px solid #444;
+        }
+        .catastrophe-container h2 {
+            margin: 0 0 15px;
+            color: #ff4444;
+            text-shadow: 0 0 10px #ff4444;
         }
         .catastrophe-container img {
             max-width: 100%;
             height: auto;
             border-radius: 16px;
-            box-shadow: 0 0 40px rgba(0,255,0,0.4);
-            border: 2px solid #333;
-            transition: transform 0.3s ease;
-        }
-        .catastrophe-container img:hover {
-            transform: scale(1.02);
+            box-shadow: 0 0 40px rgba(255,68,68,0.4);
+            border: 2px solid #444;
         }
         .card-grid {
             display: flex;
@@ -54,7 +57,7 @@
             border-radius: 18px;
             overflow: hidden;
             position: relative;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.3s ease;
             opacity: 0;
             transform: translateY(30px);
             box-shadow: 0 10px 30px rgba(0,255,0,0.2);
@@ -96,21 +99,23 @@
 <body>
     <h1>Бункер — Общий экран</h1>
 
-    <!-- Блок глобальной катастрофы -->
+    <!-- Глобальная катастрофа -->
     <div id="catastrophe-container" class="catastrophe-container">
-        <p>Ожидание катастрофы...</p>
+        <h2>Ожидание катастрофы...</h2>
+        <p>Раздача карт ещё не началась</p>
     </div>
 
-    <!-- Сетка карточек игроков -->
+    <!-- Карточки игроков -->
     <div id="card-grid" class="card-grid"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         const socket = io();
 
-        socket.on('connect', () => console.log("Socket.IO подключён к серверу"));
+        socket.on('connect', () => console.log("Socket.IO подключён"));
         socket.on('disconnect', () => console.log("Socket.IO отключён"));
 
+        // Создание/обновление карточки — ТОЛЬКО НИК без ID
         socket.on('create_card', function(data) {
             console.log("create_card:", data);
             let card = document.getElementById(`card-${data.player_id}`);
@@ -138,6 +143,7 @@
             }
         });
 
+        // Обновление ника — без ID
         socket.on('update_nick', function(data) {
             console.log("update_nick:", data);
             const card = document.getElementById(`card-${data.player_id}`);
@@ -146,6 +152,7 @@
             }
         });
 
+        // Обновление категории
         socket.on('update_category', function(data) {
             console.log("update_category:", data);
             const card = document.getElementById(`card-${data.player_id}`);
@@ -157,31 +164,35 @@
             }
         });
 
+        // Глобальная катастрофа — надёжная версия
         socket.on('set_catastrophe', function(data) {
-            console.log("set_catastrophe:", data);
+            console.log("Получена катастрофа:", data);
             const container = document.getElementById('catastrophe-container');
             if (container) {
+                const title = data.catastrophe || 'Катастрофа неизвестна';
+                const imgSrc = data.catastrophe_image || '/static/catastrophes/default.jpg';
                 container.innerHTML = `
-                    <h2>${data.catastrophe || 'Катастрофа неизвестна'}</h2>
-                    <img src="${data.catastrophe_image || '/static/catastrophes/default.jpg'}" 
-                         alt="Катастрофа" 
-                         onerror="this.src='/static/catastrophes/default.jpg';">
+                    <h2>${title}</h2>
+                    <img src="${imgSrc}" alt="${title}" 
+                         onerror="this.src='/static/catastrophes/default.jpg'; this.alt='Изображение не найдено';">
                 `;
+            } else {
+                console.error("Контейнер катастрофы не найден");
             }
         });
 
+        // Кик — карточка исчезает
         socket.on('kick_player', function(data) {
-            console.log("kick_player:", data);
+            console.log("Кик игрока:", data);
             const card = document.getElementById(`card-${data.player_id}`);
-            if (card) {
-                card.remove();
-            }
+            if (card) card.remove();
         });
 
+        // Очистка
         socket.on('clear_all', function() {
             console.log("clear_all");
             document.getElementById('card-grid').innerHTML = '';
-            document.getElementById('catastrophe-container').innerHTML = '<p>Ожидание новой катастрофы...</p>';
+            document.getElementById('catastrophe-container').innerHTML = '<h2>Ожидание новой катастрофы...</h2><p>Раздача карт ещё не началась</p>';
         });
     </script>
 </body>
