@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import hashlib
-import os
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'secret!'
@@ -52,20 +51,15 @@ def open_card():
 
     if action == "set_catastrophe":
         catastrophe = data.get('catastrophe')
-        image = data.get('catastrophe_image')
+        image = data.get('catastrophe_image') or CATASTROPHE_IMAGES.get(catastrophe, CATASTROPHE_IMAGES['default'])
+
         if not catastrophe:
             return jsonify({"status": "error", "message": "Нет catastrophe"}), 400
 
-        # Если изображение не пришло — берём из словаря
-        if not image:
-            image = CATASTROPHE_IMAGES.get(catastrophe, CATASTROPHE_IMAGES['default'])
-
-        # Обновляем все карточки
         for pid in cards_state:
             cards_state[pid]["catastrophe"] = catastrophe
             cards_state[pid]["catastrophe_image"] = image
 
-        # Отправляем событие фронтенду
         socketio.emit('set_catastrophe', {
             "catastrophe": catastrophe,
             "catastrophe_image": image
@@ -120,7 +114,6 @@ def open_card():
             return jsonify({"status": "error", "message": "Нет category или value"}), 400
 
         if player_id not in cards_state:
-            # Создаём пустую карточку
             avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
             cards_state[player_id] = {
                 "player_id": player_id,
@@ -140,6 +133,14 @@ def open_card():
             "value": value
         })
         return jsonify({"status": "category_updated"}), 200
+
+    elif action == "kick_player":
+        player_id = str(data.get('player_id'))
+        if player_id in cards_state:
+            del cards_state[player_id]
+        socketio.emit('kick_player', {"player_id": player_id})
+        print(f"Игрок {player_id} кикнут")
+        return jsonify({"status": "kicked"}), 200
 
     elif action == "clear_all":
         cards_state.clear()
