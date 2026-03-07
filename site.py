@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import hashlib
+import os
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-# Твои 9 аватаров — положи в static/avatars/
 AVATARS = [
     '/static/avatars/avatar1.jpg',
     '/static/avatars/avatar2.jpg',
@@ -19,7 +19,6 @@ AVATARS = [
     '/static/avatars/avatar9.jpg'
 ]
 
-# Изображения катастроф — положи в static/catastrophes/
 CATASTROPHE_IMAGES = {
     'Ядерная война: высокий уровень радиации, разрушенная инфраструктура, дефицит пищи и воды.': '/static/catastrophes/nuclear.jpg',
     'Пандемия смертельного вируса: высокая заразность, нужны медики и антибиотики, иммунитет критичен.': '/static/catastrophes/pandemic.jpg',
@@ -33,9 +32,10 @@ CATASTROPHE_IMAGES = {
     'Землетрясения и цунами: разрушенные города, нужны строители и медики.': '/static/catastrophes/tsunami.jpg',
     'Магнитный сдвиг полюсов: хаос в навигации, радиация, нужны ученые.': '/static/catastrophes/magnetic.jpg',
     'Биологическая война: мутировавшие организмы, нужны биологи и вакцины.': '/static/catastrophes/bio_war.jpg',
+    'default': '/static/catastrophes/default.jpg'
 }
 
-cards_state = {}  # глобальное хранилище
+cards_state = {}
 
 @app.route('/')
 def index():
@@ -52,16 +52,25 @@ def open_card():
 
     if action == "set_catastrophe":
         catastrophe = data.get('catastrophe')
-        image = data.get('catastrophe_image', CATASTROPHE_IMAGES['default'])
+        image = data.get('catastrophe_image')
+        if not catastrophe:
+            return jsonify({"status": "error", "message": "Нет catastrophe"}), 400
 
+        # Если изображение не пришло — берём из словаря
+        if not image:
+            image = CATASTROPHE_IMAGES.get(catastrophe, CATASTROPHE_IMAGES['default'])
+
+        # Обновляем все карточки
         for pid in cards_state:
             cards_state[pid]["catastrophe"] = catastrophe
             cards_state[pid]["catastrophe_image"] = image
 
+        # Отправляем событие фронтенду
         socketio.emit('set_catastrophe', {
             "catastrophe": catastrophe,
             "catastrophe_image": image
         })
+        print(f"Установлена катастрофа: {catastrophe} | Изображение: {image}")
         return jsonify({"status": "catastrophe_set"}), 200
 
     if not player_id:
@@ -76,7 +85,7 @@ def open_card():
                 "player_id": player_id,
                 "username": username,
                 "avatar": AVATARS[avatar_index],
-                "catastrophe_image": CATASTROPHE_IMAGES.get('default', '/static/catastrophes/default.jpg'),
+                "catastrophe_image": CATASTROPHE_IMAGES['default'],
                 "catastrophe": "Ожидание катастрофы...",
                 "categories": {
                     "gender_age": {"label": "Пол / Возраст", "value": "????"},
@@ -92,6 +101,7 @@ def open_card():
             cards_state[player_id]["username"] = username
 
         socketio.emit('create_card', cards_state[player_id])
+        print(f"Отправлено create_card для {username} ({player_id})")
         return jsonify({"status": "success"}), 200
 
     elif action == "update_nick":
@@ -106,20 +116,35 @@ def open_card():
         label = data.get('label')
         value = data.get('value')
 
-        if player_id in cards_state:
-            cards_state[player_id]["categories"][category] = {"label": label, "value": value}
-            socketio.emit('update_category', {
+        if not category or value is None:
+            return jsonify({"status": "error", "message": "Нет category или value"}), 400
+
+        if player_id not in cards_state:
+            # Создаём пустую карточку
+            avatar_index = int(hashlib.md5(str(player_id).encode()).hexdigest(), 16) % len(AVATARS)
+            cards_state[player_id] = {
                 "player_id": player_id,
-                "category": category,
-                "label": label,
-                "value": value
-            })
-            return jsonify({"status": "category_updated"}), 200
-        return jsonify({"status": "not_found"}), 404
+                "username": username or "???",
+                "avatar": AVATARS[avatar_index],
+                "catastrophe_image": CATASTROPHE_IMAGES['default'],
+                "catastrophe": "Ожидание катастрофы...",
+                "categories": {}
+            }
+
+        cards_state[player_id]["categories"][category] = {"label": label, "value": value}
+
+        socketio.emit('update_category', {
+            "player_id": player_id,
+            "category": category,
+            "label": label,
+            "value": value
+        })
+        return jsonify({"status": "category_updated"}), 200
 
     elif action == "clear_all":
         cards_state.clear()
         socketio.emit('clear_all')
+        print("Все карточки очищены")
         return jsonify({"status": "cleared"}), 200
 
     return jsonify({"status": "error", "message": "Неизвестное действие"}), 400
