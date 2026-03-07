@@ -2,40 +2,50 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Бункер — Общий экран</title>
     <style>
-        body { 
+        body {
             background: #0a0a0a url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
             background-size: cover;
             color: #eee;
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
         }
-        h1 { 
-            text-align: center; 
-            color: #0f0; 
-            text-shadow: 0 0 15px #0f0; 
-            margin-bottom: 30px; 
+        h1 {
+            text-align: center;
+            color: #0f0;
+            text-shadow: 0 0 15px #0f0;
+            margin-bottom: 30px;
             font-size: 3em;
         }
-
-        .catastrophe { 
-            text-align: center; 
-            margin: 30px 0 50px; 
+        .catastrophe-container {
+            text-align: center;
+            margin: 30px 0 60px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
         }
-        .catastrophe img { 
-            max-width: 900px; 
-            border-radius: 16px; 
-            box-shadow: 0 0 40px rgba(0,255,0,0.3); 
+        .catastrophe-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(0,255,0,0.4);
             border: 2px solid #333;
+            transition: transform 0.3s ease;
         }
-
-        .card-grid { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 40px; 
-            justify-content: center; 
+        .catastrophe-container img:hover {
+            transform: scale(1.02);
+        }
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            justify-content: center;
+            max-width: 1400px;
+            margin: 0 auto;
         }
         .card {
             width: 420px;
@@ -49,16 +59,14 @@
             transform: translateY(30px);
             box-shadow: 0 10px 30px rgba(0,255,0,0.2);
         }
-        .card.visible { 
-            opacity: 1; 
-            transform: translateY(0); 
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
-        .card:hover { 
-            transform: scale(1.05); 
+        .card:hover {
+            transform: scale(1.05);
             box-shadow: 0 20px 50px rgba(0,255,0,0.4);
         }
-
-        /* Никнейм сверху */
         .username {
             text-align: center;
             padding: 16px 12px;
@@ -66,185 +74,43 @@
             color: #0f0;
             background: rgba(0,0,0,0.6);
             margin: 0;
-            font-weight: bold;
-            word-wrap: break-word;
-            line-height: 1.3;
-        }
-
-        /* Аватар */
-        .avatar-container {
-            width: 100%;
-            height: 280px;
-            overflow: hidden;
-            background: #111;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .avatar {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            object-position: center;
-            transition: transform 0.4s ease;
+            width: 100%;
+            height: auto;
+            display: block;
         }
-        .card:hover .avatar {
-            transform: scale(1.08);
-        }
-
-        /* Overlay */
-        .overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.92);
-            display: none;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            text-align: center;
-            padding: 25px 20px;
-            overflow-y: auto; /* прокрутка возможна */
-        }
-        .card:hover .overlay { display: flex; }
-        .overlay h3 { 
-            margin: 20px 0 25px; 
-            color: #0f0; 
-            font-size: 1.8em; 
-            text-shadow: 0 0 12px #0f0;
+        .categories {
+            padding: 20px;
         }
         .category {
             margin: 12px 0;
-            font-size: 1.15em;
-            width: 100%;
-            text-align: left;
-            padding-left: 15px;
-            word-wrap: break-word;
-            line-height: 1.5;
+            font-size: 1.1em;
         }
         .label {
-            color: #0f0;
+            color: #0f8;
             font-weight: bold;
-            margin-right: 10px;
-        }
-
-        /* Красивые зелёные ползунки */
-        .overlay::-webkit-scrollbar {
-            width: 6px;
-        }
-        .overlay::-webkit-scrollbar-track {
-            background: rgba(0,255,0,0.08);
-            border-radius: 3px;
-            margin: 4px;
-        }
-        .overlay::-webkit-scrollbar-thumb {
-            background: #0f0;
-            border-radius: 3px;
-            box-shadow: 0 0 8px #0f0;
-        }
-        .overlay::-webkit-scrollbar-thumb:hover {
-            background: #0f8;
-            box-shadow: 0 0 12px #0f8;
-        }
-
-        /* Для Firefox */
-        .overlay {
-            scrollbar-width: thin;
-            scrollbar-color: #0f0 rgba(0,255,0,0.08);
         }
     </style>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script>
-        const socket = io();
-
-        socket.on('connect', () => {
-            console.log('Socket.IO подключён к серверу');
-        });
-
-        socket.on('create_card', (data) => {
-            console.log('Получено событие create_card:', data);
-
-            const playerId = data.player_id;
-            if (!playerId) {
-                console.error('Ошибка: нет player_id!');
-                return;
-            }
-
-            let card = document.getElementById(`card-${playerId}`);
-            if (card) {
-                console.log(`Карточка ${playerId} уже существует`);
-                return;
-            }
-
-            card = document.createElement('div');
-            card.id = `card-${playerId}`;
-            card.className = 'card';
-
-            let html = `
-                <div class="username">${data.username}</div>
-                <div class="avatar-container">
-                    <img src="${data.avatar || '/static/avatars/default.jpg'}" class="avatar" alt="${data.username}">
-                </div>
-                <div class="overlay">
-                    <h3>${data.username}</h3>
-            `;
-
-            Object.entries(data.categories || {}).forEach(([key, cat]) => {
-                html += `<div class="category"><span class="label">${cat.label}:</span> ${cat.value}</div>`;
-            });
-
-            html += `</div>`;
-            card.innerHTML = html;
-
-            document.getElementById('card-grid').appendChild(card);
-            setTimeout(() => card.classList.add('visible'), 100);
-
-            console.log(`Карточка добавлена: card-${playerId}`);
-
-            if (data.catastrophe_image) {
-                document.getElementById('catastrophe-container').innerHTML = 
-                    `<img src="${data.catastrophe_image}" alt="Катастрофа">`;
-            }
-        });
-
-        socket.on('update_category', (data) => {
-            console.log('Получено событие update_category:', data);
-
-            const playerId = data.player_id;
-            if (!playerId) {
-                console.error('Нет player_id в update_category');
-                return;
-            }
-
-            const card = document.getElementById(`card-${playerId}`);
-            if (!card) {
-                console.log(`Карточка ${playerId} не найдена`);
-                return;
-            }
-
-            const categories = card.querySelectorAll('.category');
-            const index = ['gender_age', 'profession', 'health', 'baggage', 'hobby', 'secret', 'chance'].indexOf(data.category);
-            if (index !== -1 && categories[index]) {
-                categories[index].innerHTML = `<span class="label">${data.label}:</span> ${data.value}`;
-                console.log(`Обновлено поле ${data.category} → ${data.value}`);
-            } else {
-                console.log(`Категория ${data.category} не найдена`);
-            }
-        });
-
-        socket.on('error', (err) => {
-            console.log('Ошибка Socket.IO:', err);
-        });
-    </script>
 </head>
 <body>
-    <div id="catastrophe-container"></div>
+    <h1>Бункер — Общий экран</h1>
+
+    <!-- Блок катастрофы (будет заполняться через SocketIO) -->
+    <div id="catastrophe-container" class="catastrophe-container">
+        <p>Ожидание катастрофы...</p>
+    </div>
+
+    <!-- Сетка карточек игроков -->
     <div id="card-grid" class="card-grid"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         const socket = io();
 
+        // Создание или обновление карточки игрока
         socket.on('create_card', function(data) {
+            console.log("Создание/обновление карточки:", data);
             let card = document.getElementById(`card-${data.player_id}`);
             if (!card) {
                 card = document.createElement('div');
@@ -252,26 +118,37 @@
                 card.className = 'card';
                 card.innerHTML = `
                     <div class="username">${data.username}</div>
-                    <img src="${data.avatar}" class="avatar" alt="avatar">
-                    <div class="catastrophe">
-                        <img src="${data.catastrophe_image || '/static/catastrophes/default.jpg'}" alt="Катастрофа">
+                    <img src="${data.avatar}" class="avatar" alt="Аватар">
+                    <div class="categories">
+                        <div class="category" data-category="gender_age"><span class="label">Пол / Возраст:</span> ${data.categories?.gender_age?.value || '????'}</div>
+                        <div class="category" data-category="profession"><span class="label">Профессия:</span> ${data.categories?.profession?.value || '????'}</div>
+                        <div class="category" data-category="health"><span class="label">Здоровье:</span> ${data.categories?.health?.value || '????'}</div>
+                        <div class="category" data-category="baggage"><span class="label">Багаж:</span> ${data.categories?.baggage?.value || '????'}</div>
+                        <div class="category" data-category="hobby"><span class="label">Хобби / Навык:</span> ${data.categories?.hobby?.value || '????'}</div>
+                        <div class="category" data-category="secret"><span class="label">Секрет:</span> ${data.categories?.secret?.value || '????'}</div>
+                        <div class="category" data-category="chance"><span class="label">Шанс выживания:</span> ${data.categories?.chance?.value || '????'}</div>
                     </div>
-                    <!-- категории -->
                 `;
                 document.getElementById('card-grid').appendChild(card);
+                // Плавное появление
+                setTimeout(() => card.classList.add('visible'), 100);
             } else {
                 card.querySelector('.username').textContent = data.username;
             }
         });
 
+        // Обновление ника
         socket.on('update_nick', function(data) {
+            console.log("Обновление ника:", data);
             const card = document.getElementById(`card-${data.player_id}`);
             if (card) {
                 card.querySelector('.username').textContent = data.username;
             }
         });
 
+        // Обновление категории
         socket.on('update_category', function(data) {
+            console.log("Обновление категории:", data);
             const card = document.getElementById(`card-${data.player_id}`);
             if (card) {
                 const catDiv = card.querySelector(`[data-category="${data.category}"]`);
@@ -281,16 +158,30 @@
             }
         });
 
+        // Установка глобальной катастрофы
         socket.on('set_catastrophe', function(data) {
+            console.log("Получена катастрофа:", data);
             const container = document.getElementById('catastrophe-container');
-            container.innerHTML = `<img src="${data.catastrophe_image}" alt="${data.catastrophe}" style="max-width:900px;">`;
+            if (container) {
+                container.innerHTML = `
+                    <h2>${data.catastrophe}</h2>
+                    <img src="${data.catastrophe_image}" alt="Катастрофа" onerror="this.src='/static/catastrophes/default.jpg'">
+                `;
+            } else {
+                console.error("Элемент #catastrophe-container не найден");
+            }
         });
 
+        // Очистка всего
         socket.on('clear_all', function() {
+            console.log("Очистка всех карточек");
             document.getElementById('card-grid').innerHTML = '';
-            document.getElementById('catastrophe-container').innerHTML = '';
+            document.getElementById('catastrophe-container').innerHTML = '<p>Ожидание новой катастрофы...</p>';
         });
+
+        // Для отладки подключения
+        socket.on('connect', () => console.log("SocketIO подключён"));
+        socket.on('disconnect', () => console.log("SocketIO отключён"));
     </script>
 </body>
 </html>
-
