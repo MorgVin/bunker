@@ -54,7 +54,7 @@
             border-radius: 18px;
             overflow: hidden;
             position: relative;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.5s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             opacity: 0;
             transform: translateY(30px);
             box-shadow: 0 10px 30px rgba(0,255,0,0.2);
@@ -63,12 +63,7 @@
             opacity: 1;
             transform: translateY(0);
         }
-        .card.kicked {
-            opacity: 0.4;
-            filter: grayscale(80%);
-            pointer-events: none;
-        }
-        .card:hover:not(.kicked) {
+        .card:hover {
             transform: scale(1.05);
             box-shadow: 0 20px 50px rgba(0,255,0,0.4);
         }
@@ -111,18 +106,11 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        // Подключение только один раз
         const socket = io();
 
-        socket.on('connect', () => {
-            console.log("Socket.IO подключён к серверу");
-        });
+        socket.on('connect', () => console.log("Socket.IO подключён к серверу"));
+        socket.on('disconnect', () => console.log("Socket.IO отключён"));
 
-        socket.on('disconnect', () => {
-            console.log("Socket.IO отключён");
-        });
-
-        // Создание или обновление карточки
         socket.on('create_card', function(data) {
             console.log("create_card:", data);
             let card = document.getElementById(`card-${data.player_id}`);
@@ -131,7 +119,7 @@
                 card.id = `card-${data.player_id}`;
                 card.className = 'card';
                 card.innerHTML = `
-                    <div class="username">${data.username || '???'} (ID: ${data.player_id})</div>
+                    <div class="username">${data.username || '???'}</div>
                     <img src="${data.avatar || '/static/avatars/default.jpg'}" class="avatar" alt="Аватар" onerror="this.src='/static/avatars/default.jpg'">
                     <div class="categories">
                         <div class="category" data-category="gender_age"><span class="label">Пол / Возраст:</span> ${data.categories?.gender_age?.value || '????'}</div>
@@ -145,23 +133,19 @@
                 `;
                 document.getElementById('card-grid').appendChild(card);
                 setTimeout(() => card.classList.add('visible'), 100);
-                console.log("Карточка добавлена:", card.id);
             } else {
-                card.querySelector('.username').textContent = `${data.username || '???'} (ID: ${data.player_id})`;
-                console.log("Карточка обновлена:", card.id);
+                card.querySelector('.username').textContent = data.username || '???';
             }
         });
 
-        // Обновление ника
         socket.on('update_nick', function(data) {
             console.log("update_nick:", data);
             const card = document.getElementById(`card-${data.player_id}`);
             if (card) {
-                card.querySelector('.username').textContent = `${data.username || '???'} (ID: ${data.player_id})`;
+                card.querySelector('.username').textContent = data.username || '???';
             }
         });
 
-        // Обновление категории
         socket.on('update_category', function(data) {
             console.log("update_category:", data);
             const card = document.getElementById(`card-${data.player_id}`);
@@ -173,7 +157,6 @@
             }
         });
 
-        // Установка глобальной катастрофы
         socket.on('set_catastrophe', function(data) {
             console.log("set_catastrophe:", data);
             const container = document.getElementById('catastrophe-container');
@@ -182,24 +165,19 @@
                     <h2>${data.catastrophe || 'Катастрофа неизвестна'}</h2>
                     <img src="${data.catastrophe_image || '/static/catastrophes/default.jpg'}" 
                          alt="Катастрофа" 
-                         style="max-width: 100%; border-radius: 16px;"
-                         onerror="this.src='/static/catastrophes/default.jpg'; this.alt='Изображение не найдено';">
+                         onerror="this.src='/static/catastrophes/default.jpg';">
                 `;
             }
         });
 
-        // Кик игрока — удаляем карточку
         socket.on('kick_player', function(data) {
-            console.log("Игрок кикнут:", data);
+            console.log("kick_player:", data);
             const card = document.getElementById(`card-${data.player_id}`);
             if (card) {
-                card.classList.add('kicked');
-                // Или полностью удалить: card.remove();
-                console.log(`Карточка игрока ${data.player_id} помечена как кикнутая`);
+                card.remove();
             }
         });
 
-        // Очистка всего
         socket.on('clear_all', function() {
             console.log("clear_all");
             document.getElementById('card-grid').innerHTML = '';
